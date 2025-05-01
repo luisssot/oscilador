@@ -1,0 +1,61 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import eigh_tridiagonal
+
+# Constantes naturales (unidades atómicas: hbar = m = 1)
+hbar = 1.0
+m = 1.0
+
+def potencial_barreras(x, posiciones, anchos, alturas):
+    V = np.zeros_like(x)
+    for pos, ancho, altura in zip(posiciones, anchos, alturas):
+        V += np.where((x >= pos) & (x <= pos + ancho), altura, 0)
+    return V
+
+def resolver_schrodinger(x, V, num_niveles=5):
+    dx = x[1] - x[0]
+    N = len(x)
+
+    # Diagonal y subdiagonal del hamiltoniano
+    diagonal = (hbar**2 / (m * dx**2)) + V
+    off_diagonal = np.full(N-1, -hbar**2 / (2 * m * dx**2))
+
+    # Resolver autovalores y autovectores
+    valores, vectores = eigh_tridiagonal(diagonal, off_diagonal)
+    return valores[:num_niveles], vectores[:, :num_niveles]
+
+def main():
+    # Dominio espacial
+    x_min, x_max = 0, 10
+    N = 1000
+    x = np.linspace(x_min, x_max, N)
+
+    # Parámetros de las barreras (modificables)
+    num_barreras = 3
+    posiciones = [2.0 + i for i in range(num_barreras)]
+    anchos = [0.5] * num_barreras
+    alturas = [50] * num_barreras
+
+    # Crear potencial
+    V = potencial_barreras(x, posiciones, anchos, alturas)
+
+    # Resolver Schrödinger
+    niveles, funciones = resolver_schrodinger(x, V)
+
+    # Graficar resultados
+    plt.figure(figsize=(10, 6))
+    plt.plot(x, V, 'k', label='Potencial')
+
+    for i, (E, psi) in enumerate(zip(niveles, funciones.T)):
+        psi_norm = psi / np.sqrt(np.trapz(psi**2, x))
+        plt.plot(x, psi_norm**2 + E, label=f"Nivel {i} (E={E:.2f})")
+
+    plt.title("Solución de la ecuación de Schrödinger con múltiples barreras")
+    plt.xlabel("x")
+    plt.ylabel("Energía / Densidad de probabilidad")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+if __name__ == "__main__":
+    main()
